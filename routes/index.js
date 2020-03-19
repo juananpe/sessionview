@@ -1,7 +1,13 @@
 var express = require('express');
 var router = express.Router();
+var admin = require('firebase-admin');
 var session = require('express-session');
-// const MongoStore = require('connect-mongo')(session);
+const MongoStore = require('connect-mongo')(session);
+
+admin.initializeApp({
+  credential: admin.credential.applicationDefault(),
+  databaseURL: "https://dawe2020-XXXXXXXXXX.firebaseio.com"
+});
 
 // Use the session middleware
 router.use(session({
@@ -9,7 +15,7 @@ router.use(session({
   saveUninitialized: true, // create session even if there is nothing stored
   resave: true, // save session even if unmodified
   cookie: { maxAge: 60 * 60 * 1000 },
- // store: new MongoStore({ url: 'mongodb://127.0.0.1:27017/test-app'})
+  store: new MongoStore({ url: 'mongodb://127.0.0.1:27017/test-app'})
 }));
 
 
@@ -46,6 +52,69 @@ router.get('/logout',(req,res) => {
 
 });
 
+//
+// /* GET home page. */
+// router.get('/:idToken', function (req, res) {
+//
+//     const idToken = req.params.idToken;
+//
+// // idToken comes from the client app
+//     admin.auth().verifyIdToken(idToken)
+//         .then(function (decodedToken) {
+//             let uid = decodedToken.uid;
+//
+//             admin.auth().getUser(uid)
+//                 .then(function(userRecord) {
+//                     // See the UserRecord reference doc for the contents of userRecord.
+//                     console.log( "Email verified:" + userRecord.emailVerified);
+//                     console.log('Successfully fetched user data:', userRecord.toJSON());
+//                     req.session.email = userRecord.email;
+//                     res.render('form', {title: userRecord.email});
+//                 })
+//                 .catch(function(error) {
+//                     console.log('Error fetching user data:', error);
+//                     res.render('error', {error: error, message: "Error fetching user data"});
+//                 });
+//
+//         }).catch(function (error) {
+//         // Handle error
+//         res.render('error', {error: error, message: "You must be signed-up"});
+//     });
+//
+//
+// });
+
+router.post('/getToken', (req, res) => {
+  const idToken = req.body.idToken; // capturar parámetro
+
+// idToken comes from the client app
+// verificamos el idToken para ver si es válido
+  admin.auth().verifyIdToken(idToken)
+      .then(function (decodedToken) {
+// si es válido, lo decodificamos
+        let uid = decodedToken.uid;
+
+// y obtenemos los datos asociados a ese usuario
+        admin.auth().getUser(uid)
+            .then(function(userRecord) {
+              // See the UserRecord reference doc for the contents of userRecord.
+              console.log('Successfully fetched user data:', userRecord.toJSON());
+              req.session.email = userRecord.email;
+              req.session.emailVerified = userRecord.emailVerified;
+                res.send('{"status": "done"}');
+            })
+            .catch(function(error) {
+              console.log('Error fetching user data:', error);
+              res.send('{"status": "error"}');
+            });
+
+      }).catch(function (error) {
+    // Handle error
+    res.render('error', {error: error, message: "You must be signed-up"});
+  });
+
+
+});
 
 // // Access the session as req.session
 // router.get('/', function(req, res, next) {
